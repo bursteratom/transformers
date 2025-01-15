@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import torch
 
@@ -6,7 +6,7 @@ from ..utils import is_torch_flex_attn_available
 
 
 if is_torch_flex_attn_available():
-    from torch.nn.attention.flex_attention import flex_attention
+    from torch.nn.attention.flex_attention import flex_attention, BlockMask
 
 
 def flex_attention_forward(
@@ -14,12 +14,18 @@ def flex_attention_forward(
     query: torch.Tensor,
     key: torch.Tensor,
     value: torch.Tensor,
-    attention_mask: Optional[torch.Tensor],
+    attention_mask: Optional[Union[torch.Tensor, BlockMask]],
     scaling: Optional[float] = None,
     softcap: Optional[float] = None,
     **kwargs,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    causal_mask = attention_mask
+    block_mask = None
+    causal_mask = None
+    if isinstance(attention_mask, BlockMask):
+        block_mask = attention_mask
+    else:
+        causal_mask = attention_mask
+
     if causal_mask is not None:
         causal_mask = causal_mask[:, :, :, : key.shape[-2]]
 
@@ -37,6 +43,7 @@ def flex_attention_forward(
         score_mod=causal_mod,
         enable_gqa=True,
         scale=scaling,
+        block_mask=block_mask,
         # Last time checked on PyTorch == 2.5.1: Flex Attention always computes the lse regardless.
         # For simplification, we thus always return it as no additional computations are introduced.
         return_lse=True,
