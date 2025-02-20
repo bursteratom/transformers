@@ -3846,6 +3846,10 @@ class Trainer:
                 state_dict = self.accelerator.get_state_dict(self.model)
                 if self.args.should_save:
                     self._save(output_dir, state_dict=state_dict)
+        elif self.is_tp_enabled:
+            state_dict = self.accelerator.get_state_dict(self.model)
+            if self.args.should_save:
+                self._save(output_dir, state_dict=state_dict)
         elif self.is_deepspeed_enabled:
             try:
                 state_dict = self.accelerator.get_state_dict(self.deepspeed)
